@@ -24,6 +24,11 @@
 Changes
 =======
 
+Version 0.3.2 (released 2015-10-07)
+-----------------------------------
+
+- Code style fixes and version bump of required packages.
+
 Version 0.3.1 (released 2015-10-05)
 -----------------------------------
 
