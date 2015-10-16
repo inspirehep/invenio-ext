@@ -62,7 +62,6 @@ requirements = [
     'fixture>=1.5',
     'intbitset>=2.0.0',
     'invenio-base>=0.3.1',
-    'invenio-celery>=0.1.1',
     'invenio-utils>=0.2.0',
     'lxml>=3.3',
     # FIXME new oauthlib release after 0.7.2 has some compatible problems with

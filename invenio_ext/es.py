@@ -24,8 +24,6 @@ from __future__ import absolute_import
 from elasticsearch import Elasticsearch
 from elasticsearch.connection import RequestsHttpConnection
 
-from invenio_celery import celery
-
 es = None
 
 SEARCH_RECORD_MAPPING = {

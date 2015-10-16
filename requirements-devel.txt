@@ -25,7 +25,6 @@
 -e git+git://github.com/inveniosoftware/invenio-access.git#egg=invenio-access
 -e git+git://github.com/inveniosoftware/invenio-accounts.git#egg=invenio-accounts
 -e git+git://github.com/inveniosoftware/invenio-base.git#egg=invenio-base
--e git+git://github.com/inveniosoftware/invenio-celery.git#egg=invenio-celery
 -e git+git://github.com/inveniosoftware/invenio-collections.git#egg=invenio-collections
 -e git+git://github.com/inveniosoftware/invenio-knowledge.git#egg=invenio-knowledge
 -e git+git://github.com/inveniosoftware/invenio-oauth2server.git#egg=invenio-oauth2server
