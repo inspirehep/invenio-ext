@@ -134,13 +134,17 @@ class CrossRef(object):
 
     def search(self, doi=None):
         """Search for given DOI."""
-        doi = (self.app.config.get("CROSSREF_SEARCH_PREFIX", "") + doi if doi
-               else request.args.get("doi"))
-
         from invenio_records.utils import get_unique_record_json
 
+        doi = doi or request.args.get("doi")
+
         # query the database
-        result = get_unique_record_json(doi)
+        result = get_unique_record_json(
+            "\"{0}{1}\"".format(
+                self.app.config.get("CROSSREF_SEARCH_PREFIX", ""),
+                doi
+            )
+        )
         if result["status"] == "notfound":
             # query crossref
             result = self.get_json(doi)
