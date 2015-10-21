@@ -21,202 +21,36 @@
 
 from __future__ import absolute_import
 
+import json
+
 from elasticsearch import Elasticsearch
 from elasticsearch.connection import RequestsHttpConnection
 
+from invenio.base.globals import cfg
+from invenio_search.registry import mappings
+
 es = None
-
-SEARCH_RECORD_MAPPING = {
-    "settings": {
-        "analysis": {
-            "filter": {
-                "asciifold_with_orig": {
-                    "type": "asciifolding",
-                    "preserve_original": True
-                },
-
-                "synonyms_kbr": {
-                    "type": "synonym",
-                    "synonyms": [
-                        "production => creation"
-                    ]
-                }
-            },
-            "analyzer": {
-                "natural_text": {
-                    "type": "custom",
-                    "tokenizer": "standard",
-                    "filter": [
-                        "asciifold_with_orig",
-                        "lowercase",
-                        "synonyms_kbr"
-                    ]
-                },
-                "basic_analyzer": {
-                    "type": "custom",
-                    "tokenizer": "standard",
-                    "filter": [
-                        "asciifold_with_orig",
-                        "lowercase"
-                    ]
-                }
-            }
-        },
-        "index.percolator.map_unmapped_fields_as_string": True,
-    },
-    "mappings": {
-        "record": {
-            "_all": {"enabled": False},
-            "date_detection": False,
-            "numeric_detection": False,
-            "dynamic_templates": [
-                {"default": {
-                    "match_mapping_type": "string",
-                    "mapping": {
-                        "analyzer": "basic_analyzer",
-                        "type": "string",
-                        "copy_to": "global_default"
-                    }
-                }
-                }
-            ],
-            "properties": {
-                "global_fulltext": {
-                    "type": "string",
-                    "analyzer": "natural_text"
-                },
-                "global_default": {
-                    "type": "string",
-                    "analyzer": "basic_analyzer"
-                },
-                "_collections": {
-                    "type": "string",
-                    "index": "not_analyzed"
-                },
-                "collections": {
-                    "properties": {
-                        "primary": {
-                            "type": "string",
-                            "index": "not_analyzed"
-                        },
-                        "secondary": {
-                            "type": "string",
-                            "index": "not_analyzed"
-                        }
-                    }
-                },
-                "authors": {
-                    "type": "string",
-                    "fields": {
-                        "raw": {
-                            "type": "string",
-                            "index": "not_analyzed"
-                        }
-                    }
-                },
-                "main_entry_personal_name": {
-                    "type": "object",
-                    "properties": {
-                        "personal_name": {
-                            "type": "string",
-                            "copy_to": ["authors"],
-                            "analyzer": "natural_text"
-                        }
-                    }
-                },
-                "added_entry_personal_name": {
-                    "type": "object",
-                    "properties": {
-                        "personal_name": {
-                            "type": "string",
-                            "copy_to": ["authors"],
-                            "analyzer": "natural_text"
-                        }
-                    }
-                },
-                "abstract": {
-                    "type": "string",
-                    "analyzer": "natural_text"
-                },
-                "title": {
-                    "type": "string",
-                    "analyzer": "natural_text"
-                },
-                "title_statement": {
-                    "type": "object",
-                    "properties": {
-                        "title": {
-                            "type": "string", "copy_to": ["title", "global_fulltext"],
-                            "analyzer": "natural_text"
-                        }
-                    }
-                },
-                "division": {
-                    "type": "string"
-                },
-                "experiment": {
-                    "type": "string"
-                },
-                "varying_form_of_title": {
-                    "type": "object",
-                    "properties": {
-                        "title_proper_short_title": {
-                            "type": "string", "copy_to": ["title", "global_fulltext"],
-                            "analyzer": "natural_text"
-                        }
-                    }
-                },
-                "summary_": {
-                    "type": "object",
-                    "properties": {
-                        "summary_": {
-                            "type": "string", "copy_to": ["abstract", "global_fulltext"],
-                            "analyzer": "natural_text"
-                        }
-                    }
-                },
-                "date_and_time_of_latest_transaction": {
-                    "type": "date",
-                    "format": "yyyy||yyyyMM||yyyyMMdd||yyyyMMddHHmmss||yyyyMMddHHmmss.S",
-                },
-                "publication_date": {
-                    "type": "date",
-                    "format": "yyyy||yyyyMM||yyyyMMdd||yyyyMMddHHmmss||yyyyMMddHHmmss.S||dd MM yyyy||dd MMM yyyy||MMM yyyy||MMM yyyy?||yyyy ('repr'.1964.)",
-                },
-                "publication_distribution_imprint": {
-                    "type": "object",
-                    "properties": {
-                        "date_of_publication_distribution": {
-                            "type": "date",
-                            "format": "yyyy||yyyyMM||yyyyMMdd||yyyyMMddHHmmss||yyyyMMddHHmmss.S||dd MM yyyy||dd MMM yyyy||MMM yyyy||MMM yyyy?||yyyy ('repr'.1964.)",
-                            "copy_to": ["publication_date"]
-                        },
-                        "name_of_publisher_distributor": {
-                            "type": "string",
-                            "analyzer": "basic_analyzer"
-
-                        },
-                        "place_of_publication_distribution": {
-                            "type": "string",
-                            "analyzer": "basic_analyzer"
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 
 def create_index(sender, **kwargs):
     """Create or recreate the elasticsearch index for records."""
-    es.indices.delete(index='records', ignore=404)
-    es.indices.create(index='records', body=SEARCH_RECORD_MAPPING)
+    indices = set(cfg["SEARCH_ELASTIC_COLLECTION_INDEX_MAPPING"].values())
+    indices.add(cfg['SEARCH_ELASTIC_DEFAULT_INDEX'])
+    for index in indices:
+        mapping = {}
+        mapping_filename = index + ".json"
+        if mapping_filename in mappings:
+            mapping = json.load(open(mappings[mapping_filename], "r"))
+        es.indices.delete(index=index, ignore=404)
+        es.indices.create(index=index, body=mapping)
 
 
 def delete_index(sender, **kwargs):
     """Create the elasticsearch index for records."""
-    es.indices.delete(index='records', ignore=404)
+    indices = set(cfg["SEARCH_ELASTIC_COLLECTION_INDEX_MAPPING"].values())
+    indices.add(cfg['SEARCH_ELASTIC_DEFAULT_INDEX'])
+    for index in indices:
+        es.indices.delete(index=index, ignore=404)
 
 
 def setup_app(app):
