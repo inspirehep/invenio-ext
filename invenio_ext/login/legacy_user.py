@@ -269,19 +269,23 @@ class UserInfo(CombinedMultiDict, UserMixin):
                   timeout=timeout)
         return data
 
+    @property
     def is_authenticated(self):
         """Check if user is authenticated."""
         return not self.is_guest
 
+    @property
     def is_authorized(self, name, **kwargs):
         """Check if user is authorized."""
         from invenio_access.engine import acc_authorize_action
         return acc_authorize_action(self, name)[0] == 0
 
+    @property
     def is_active(self):
         """Check if user is active."""
         return not self.is_guest
 
+    @property
     def is_confirmed(self):
         """Return true if accounts has been confirmed."""
         return self['note'] == "1"

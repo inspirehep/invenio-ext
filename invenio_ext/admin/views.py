@@ -72,7 +72,7 @@ class BaseView(FlaskBaseView):
 
     def _handle_view(self, name, **kwargs):
         """The method will be executed before calling any view method."""
-        if not current_user.is_authenticated():
+        if not current_user.is_authenticated:
             return current_app.login_manager.unauthorized()
 
         if not self.is_accessible():
@@ -80,7 +80,7 @@ class BaseView(FlaskBaseView):
 
     def is_accessible(self):
         """Check if admin interface is accessible by the current user."""
-        if not current_user.is_authenticated():
+        if not current_user.is_authenticated:
             return False
         return self.can_view
 
