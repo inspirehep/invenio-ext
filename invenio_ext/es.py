@@ -62,7 +62,11 @@ def setup_app(app):
 
     es = Elasticsearch(
         app.config.get('ES_HOSTS', None),
-        connection_class=RequestsHttpConnection
+        connection_class=RequestsHttpConnection,
+        sniff_on_start=True,
+        sniff_on_connection_fail=True,
+        sniffer_timeout=60,
+        retry_on_timeout=True,
     )
 
     signals.pre_command.connect(delete_index, sender=drop)
