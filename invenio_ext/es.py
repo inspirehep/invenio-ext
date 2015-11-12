@@ -60,14 +60,39 @@ def setup_app(app):
 
     global es
 
+    hosts = app.config.get('ES_HOSTS', None)
+
+    def get_host_info(node_info, host):
+        """Simple callback that takes the node info from `/_cluster/nodes` and a
+        parsed connection information and return the connection information.
+
+        If `None` is returned this node will be skipped.
+
+        By default master only nodes are filtered out since they shouldn't
+        typically be used for API operations.
+
+        :arg node_info: node information from `/_cluster/nodes`
+        :arg host: connection information (host, port) extracted from the node info
+        """
+        # Only allow nodes from ES_HOSTS
+        if hosts:
+            found = False
+            for allowed_node in hosts:
+                if node_info.get('host') in allowed_node:
+                    found = True
+            if not found:
+                return None
+        return host
+
     es = Elasticsearch(
-        app.config.get('ES_HOSTS', None),
+        hosts,
         connection_class=RequestsHttpConnection,
         sniff_on_start=True,
         sniff_on_connection_fail=True,
         sniffer_timeout=60,
         sniff_timeout=10,
         retry_on_timeout=True,
+        host_info_callback=get_host_info
     )
 
     signals.pre_command.connect(delete_index, sender=drop)
