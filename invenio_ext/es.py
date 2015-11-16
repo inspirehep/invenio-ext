@@ -62,6 +62,8 @@ def setup_app(app):
 
     hosts = app.config.get('ES_HOSTS', None)
 
+    sniff_timeout = app.config.get('ES_SNIFF_TIMEOUT', 10)
+
     def get_host_info(node_info, host):
         """Simple callback that takes the node info from `/_cluster/nodes` and a
         parsed connection information and return the connection information.
@@ -90,7 +92,7 @@ def setup_app(app):
         sniff_on_start=True,
         sniff_on_connection_fail=True,
         sniffer_timeout=60,
-        sniff_timeout=10,
+        sniff_timeout=sniff_timeout,
         retry_on_timeout=True,
         host_info_callback=get_host_info
     )
