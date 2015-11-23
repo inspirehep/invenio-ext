@@ -89,7 +89,6 @@ def setup_app(app):
     es = Elasticsearch(
         hosts,
         connection_class=RequestsHttpConnection,
-        sniff_on_start=True,
         sniff_on_connection_fail=True,
         sniffer_timeout=60,
         sniff_timeout=sniff_timeout,
