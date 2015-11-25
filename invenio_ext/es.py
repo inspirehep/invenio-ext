@@ -21,43 +21,14 @@
 
 from __future__ import absolute_import
 
-import json
-
 from elasticsearch import Elasticsearch
 from elasticsearch.connection import RequestsHttpConnection
-
-from invenio.base.globals import cfg
-from invenio_search.registry import mappings
 
 es = None
 
 
-def create_index(sender, **kwargs):
-    """Create or recreate the elasticsearch index for records."""
-    indices = set(cfg["SEARCH_ELASTIC_COLLECTION_INDEX_MAPPING"].values())
-    indices.add(cfg['SEARCH_ELASTIC_DEFAULT_INDEX'])
-    for index in indices:
-        mapping = {}
-        mapping_filename = index + ".json"
-        if mapping_filename in mappings:
-            mapping = json.load(open(mappings[mapping_filename], "r"))
-        es.indices.delete(index=index, ignore=404)
-        es.indices.create(index=index, body=mapping)
-
-
-def delete_index(sender, **kwargs):
-    """Create the elasticsearch index for records."""
-    indices = set(cfg["SEARCH_ELASTIC_COLLECTION_INDEX_MAPPING"].values())
-    indices.add(cfg['SEARCH_ELASTIC_DEFAULT_INDEX'])
-    for index in indices:
-        es.indices.delete(index=index, ignore=404)
-
-
 def setup_app(app):
     """Set up the extension for the given app."""
-    from invenio_base import signals
-    from invenio_base.scripts.database import recreate, drop, create
-
     global es
 
     hosts = app.config.get('ES_HOSTS', None)
@@ -95,8 +66,3 @@ def setup_app(app):
         retry_on_timeout=True,
         host_info_callback=get_host_info
     )
-
-    signals.pre_command.connect(delete_index, sender=drop)
-    signals.pre_command.connect(create_index, sender=create)
-    signals.pre_command.connect(delete_index, sender=recreate)
-    signals.pre_command.connect(create_index, sender=recreate)
