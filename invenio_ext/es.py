@@ -21,10 +21,59 @@
 
 from __future__ import absolute_import
 
+import six
+from urlparse import urlparse
+
 from elasticsearch import Elasticsearch
 from elasticsearch.connection import RequestsHttpConnection
 
 es = None
+
+
+# Extracted from elasticsearch library
+def normalize_hosts(hosts):
+    """
+    Helper function to transform hosts argument to
+    :class:`~elasticsearch.Elasticsearch` to a list of dicts.
+    """
+    # if hosts are empty, just defer to defaults down the line
+    if hosts is None:
+        return [{}]
+
+    # passed in just one string
+    if isinstance(hosts, six.string_types):
+        hosts = [hosts]
+
+    out = []
+    # normalize hosts to dicts
+    for host in hosts:
+        if isinstance(host, six.string_types):
+            if '://' not in host:
+                host = "//%s" % host
+
+            parsed_url = urlparse(host)
+            h = {"host": parsed_url.hostname}
+
+            if parsed_url.port:
+                h["port"] = parsed_url.port
+
+            if parsed_url.scheme == "https":
+                h['port'] = parsed_url.port or 443
+                h['use_ssl'] = True
+                h['scheme'] = 'http'
+            elif parsed_url.scheme:
+                h['scheme'] = parsed_url.scheme
+
+            if parsed_url.username or parsed_url.password:
+                h['http_auth'] = '%s:%s' % (parsed_url.username, parsed_url.password)
+
+            if parsed_url.path and parsed_url.path != '/':
+                h['url_prefix'] = parsed_url.path
+
+            out.append(h)
+        else:
+            out.append(host)
+    return out
 
 
 def setup_app(app):
@@ -36,7 +85,7 @@ def setup_app(app):
     sniff_timeout = app.config.get('ES_SNIFF_TIMEOUT', 10)
 
     def get_host_info(node_info, host):
-        """Simple callback that takes the node info from `/_cluster/nodes` and a
+        """Simple callback that takes the node info from `/_nodes/_all/clear` and a
         parsed connection information and return the connection information.
 
         If `None` is returned this node will be skipped.
@@ -44,16 +93,23 @@ def setup_app(app):
         By default master only nodes are filtered out since they shouldn't
         typically be used for API operations.
 
-        :arg node_info: node information from `/_cluster/nodes`
+        :arg node_info: node information from `/_nodes/_all/clear`
         :arg host: connection information (host, port) extracted from the node info
         """
         # Only allow nodes from ES_HOSTS
         if hosts:
-            found = False
-            for allowed_node in hosts:
-                if node_info.get('host') in allowed_node:
-                    found = True
-            if not found:
+            accepted_node = None
+            for allowed_hostname in hosts:
+                if node_info.get('name') in allowed_hostname:
+                    # E.g. 'nodename' in 'http://*:*@nodename.example.com:80'
+                    accepted_node = allowed_hostname
+                    break
+            if accepted_node is not None:
+                # Need to use the same internal function used upon parsing
+                # ES_HOSTS so that we connect the same way. E.g. proxy support
+                # and http_auth.
+                host = normalize_hosts(accepted_node)[0]
+            else:
                 return None
         return host
 
