@@ -120,5 +120,6 @@ def setup_app(app):
         sniffer_timeout=60,
         sniff_timeout=sniff_timeout,
         retry_on_timeout=True,
-        host_info_callback=get_host_info
+        host_info_callback=get_host_info,
+        timeout=60
     )
