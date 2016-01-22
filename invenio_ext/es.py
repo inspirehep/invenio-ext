@@ -21,37 +21,13 @@
 
 from __future__ import absolute_import
 
-import json
 import six
-
-from collections import OrderedDict
 from urlparse import urlparse
 
 from elasticsearch import Elasticsearch
 from elasticsearch.connection import RequestsHttpConnection
-from elasticsearch.serializer import JSONSerializer
-from elasticsearch.exceptions import SerializationError
 
 es = None
-
-
-class OrderedJSONSerializer(JSONSerializer):
-
-    def dumps(self, data):
-        # don't serialize strings
-        if isinstance(data, six.string_types):
-            return data
-
-        try:
-            if 'size' in data:
-                data = OrderedDict([
-                    ('from', data.get('from', 0)),
-                    ('size', data.get('size')),
-                ] + [(k, v) for k, v in data.items()
-                     if k not in ('size', 'from')])
-            return json.dumps(data, default=self.default)
-        except (ValueError, TypeError) as e:
-            raise SerializationError(data, e)
 
 
 # Extracted from elasticsearch library
@@ -145,6 +121,5 @@ def setup_app(app):
         sniff_timeout=sniff_timeout,
         retry_on_timeout=True,
         host_info_callback=get_host_info,
-        timeout=60,
-        serializer=OrderedJSONSerializer(),
+        timeout=60
     )
