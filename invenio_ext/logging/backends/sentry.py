@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of Invenio.
-# Copyright (C) 2014, 2015 CERN.
+# Copyright (C) 2014, 2015, 2016 CERN.
 #
 # Invenio is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -51,6 +51,7 @@ import pkg_resources
 from celery.signals import after_setup_logger, after_setup_task_logger
 from flask import current_app
 from raven.contrib.flask import Sentry
+from raven.contrib.celery import register_signal
 from raven.handlers.logging import SentryHandler
 from raven.processors import SanitizePasswordsProcessor
 from werkzeug.local import LocalProxy
@@ -115,14 +116,28 @@ def celery_dsn_fix(app):
             )
 
 
+class CelerySentryHandler(SentryHandler):
+    """
+    A handler which registers to handle celery failures and include
+    full traceback (with local frames)
+
+    Discussion: https://github.com/getsentry/raven-python/issues/427
+    """
+    def __init__(self, *args, **kwargs):
+        super(CelerySentryHandler, self).__init__(*args, **kwargs)
+
+        register_signal(self.client)
+
+
 def add_handler(logger, app):
     """Add handler to logger if not already added."""
+
     for h in logger.handlers:
-        if isinstance(h, SentryHandler):
+        if isinstance(h, CelerySentryHandler):
             return
 
     logger.addHandler(
-        SentryHandler(
+        CelerySentryHandler(
             app.extensions['sentry'].client,
             level=app.config['LOGGING_SENTRY_LEVEL']
         )
