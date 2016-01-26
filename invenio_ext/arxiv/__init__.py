@@ -157,18 +157,8 @@ class Arxiv(object):
         """Search for given ArXiv ID."""
         arxiv = arxiv or request.args.get("arxiv")
 
-        from invenio_records.utils import get_unique_record_json
-
-        # query the database
-        result = get_unique_record_json(
-            "\"{0}{1}\"".format(
-                self.app.config.get(
-                    "ARXIV_SEARCH_PREFIX",
-                    ""),
-                arxiv))
-        if result["status"] == "notfound":
-            # query arxiv
-            result = self.get_json(arxiv)
+        # query arxiv
+        result = self.get_json(arxiv)
 
         resp = jsonify(result)
         resp.status_code = response_code.get(result['status'],
